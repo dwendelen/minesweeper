@@ -1,5 +1,7 @@
 package minesweeper.neural
 
+import org.assertj.core.api.Assertions
+import org.assertj.core.data.Percentage
 import org.junit.Test
 
 class NeuralNetworkTest {
