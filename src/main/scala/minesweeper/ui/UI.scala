@@ -29,7 +29,7 @@ class UI(minesweeper: Minesweeper, learn: Boolean, play: Boolean = false) {
         val frame = new JFrame("FrameDemo")
         minesweeper.observable()
                 .subscribe((ev: MinesweeperEvent) => ev match {
-                    case e: OpenedEvent =>
+                    case e: ExposedEvent =>
                         val button = e.cell.button
                         button.setForeground(Color.LIGHT_GRAY)
                         button.setBackground(Color.LIGHT_GRAY)

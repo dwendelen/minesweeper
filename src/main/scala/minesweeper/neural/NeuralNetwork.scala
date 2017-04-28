@@ -1,31 +1,19 @@
 package minesweeper.neural
 
-import minesweeper.store.{LayerDTO, NetworkDTO, NeuronDTO}
+import minesweeper.store.{LayerDTO, NetworkDTO}
 
 class NeuralNetwork(val inputs: List[Input],
-                    val hiddenLayers: List[List[Neuron]],
-                    val output: Neuron) {
+                    val neurons: List[List[Neuron]]) {
 
-    //    def this() = {
-    //        this(createInputs(nbOfInputs), createHiddenLayers(), createOutputNeuron())
-    //    }
-
-    def allNeuronLayers: List[List[Neuron]] = hiddenLayers ++ List(List(output))
-
-    val weights = allNeuronLayers
-            .flatten
-            .flatMap(neuron => {
-                val weightsOfInputs = neuron.inputs.map(_.weight)
-                neuron.fixedValue :: weightsOfInputs
-            })
-
-    def setInput(index: Int, input: Double): Unit = {
-        inputs(index).value = input
+    def setInput(values: List[Double]): Unit = {
+        inputs
+                .zip(values)
+                .foreach { case (input, value) => input.value = value }
     }
 
-    def evaluate(): Double = {
+    def evaluate(): List[Double] = {
         forward()
-        output.value
+        neurons.last.map(_.value)
     }
 
     def learn(stepFactor: Double): Unit = {
@@ -35,40 +23,37 @@ class NeuralNetwork(val inputs: List[Input],
     }
 
     private def resetGradient(): Unit = {
-        (weights ++ inputs ++ hiddenLayers.flatten)
-                .foreach(_.gradient = 0)
+        neurons
+                .flatten
+                .foreach(_.resetGradient())
     }
 
     private def forward(): Unit = {
-        allNeuronLayers
-                .foreach(
-                    layer => layer.foreach(
-                        neuron => neuron.forward()
-                    )
-                )
+        neurons
+                .flatten
+                .foreach(_.forward())
     }
 
     private def backwards(): Unit = {
-        allNeuronLayers
+        neurons
+                .flatten
                 .reverse
-                .foreach(
-                    layer => layer.foreach(
-                        neuron => neuron.backwards()
-                    )
-                )
+                .foreach(_.backwards())
     }
 
-    def step(stepFactor: Double): Unit = {
-        weights.foreach(_.step(stepFactor))
+    private def step(stepFactor: Double): Unit = {
+        neurons
+                .flatten
+                .foreach(_.step(stepFactor))
     }
 
 
     def store(): NetworkDTO = {
         val neuronIdMap: Map[NeuronInput, Int] =
-            (inputs ++ allNeuronLayers.flatten)
+            (inputs ++ neurons.flatten)
                     .zipWithIndex
                     .toMap
-        val layers = allNeuronLayers.map(storeLayer(_, neuronIdMap))
+        val layers = neurons.map(storeLayer(_, neuronIdMap))
         NetworkDTO(layers)
     }
 
@@ -79,57 +64,41 @@ class NeuralNetwork(val inputs: List[Input],
 }
 
 object NeuralNetwork {
-    def createRandom(nbOfInputs: Int, nbOfHiddenNeurons: List[Int]): NeuralNetwork = {
+    def createRandom(nbOfInputs: Int, nbOfNeurons: List[Int]): NeuralNetwork = {
         val inputs = createInputs(nbOfInputs)
-        val hiddenLayers = createHiddenLayers(inputs, nbOfHiddenNeurons)
-        val outputNeuron = createOutputNeuron(hiddenLayers)
+        val neurons = createNeurons(inputs, nbOfNeurons)
 
-        new NeuralNetwork(inputs, hiddenLayers, outputNeuron)
+        neurons.last.foreach(_.gradient = 1)
+        new NeuralNetwork(inputs, neurons)
     }
 
     private def createInputs(nbOfInputs: Int) = {
         (0 until nbOfInputs)
-                .map(_ => new Input)
-                .toList
+            .map(_ => new Input)
+            .toList
     }
 
-    private def createHiddenLayers(inputs: List[Input], nbOfHiddenNeurons: List[Int]): List[List[Neuron]] = {
-        val firstLayer: List[Neuron] = createLayer(inputs, nbOfHiddenNeurons.head)
-        nbOfHiddenNeurons.tail
-                .scanLeft(firstLayer)(
-                    (previousLayer, nbOfNeurons) => createLayer(previousLayer, nbOfNeurons)
-                )
+    private def createNeurons(inputs: List[Input], nbOfNeurons: List[Int]): List[List[Neuron]] = {
+        val firstLayer: List[Neuron] = createLayer(inputs, nbOfNeurons.head)
+        nbOfNeurons.tail
+            .scanLeft(firstLayer)((previousLayer, nbOfNeurons) =>
+                createLayer(previousLayer, nbOfNeurons)
+            )
     }
 
     private def createLayer(previousLayer: List[NeuronInput], size: Int): List[Neuron] = {
         (0 until size)
-                .map(_ => createNeuron(previousLayer))
-                .toList
+            .map(_ => createNeuron(previousLayer))
+            .toList
     }
 
     private def createNeuron(previousLayer: List[NeuronInput]) = {
-        new Neuron(createInputPairs(previousLayer), new Weight)
+        val neuron = new Neuron(createInputPairs(previousLayer), new Weight)
+        neuron.randomiseWeights()
+        neuron
     }
 
     private def createInputPairs(inputs: List[NeuronInput]): List[InputPair] = {
         inputs.map(i => InputPair(i, new Weight))
-    }
-
-    private def createOutputNeuron(hiddenLayers: List[List[Neuron]]): Neuron = {
-        val outputNeuron = createNeuron(hiddenLayers.last)
-        outputNeuron.gradient = 1
-        outputNeuron
-    }
-
-    def fromDTO(networkDTO: NetworkDTO): NeuralNetwork = {
-        def firstNeuron = networkDTO.layers(0).neurons(0)
-
-        val nbOfInputs = firstNeuron.weights.size
-
-        val inputs = (0 until nbOfInputs)
-                .map(_ => new Input)
-                .toList
-
-        throw new UnsupportedOperationException
     }
 }

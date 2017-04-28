@@ -10,7 +10,7 @@ case class DataSet(points: List[DataPoint]) {
 }
 
 case class DataPoint(inputs: List[Double],
-                     output: Double) {
+                     output: List[Double]) {
     def store(): DataPointDTO = {
         DataPointDTO(inputs, output)
     }

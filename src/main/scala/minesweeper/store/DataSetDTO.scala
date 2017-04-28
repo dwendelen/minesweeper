@@ -8,4 +8,4 @@ case class DataSetDTO(@BeanProperty
 case class DataPointDTO(@BeanProperty
                         inputs: List[Double],
                         @BeanProperty
-                        output: Double)
+                        output: List[Double])

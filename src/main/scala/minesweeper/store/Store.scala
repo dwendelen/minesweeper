@@ -1,6 +1,6 @@
 package minesweeper.store
 
-import java.io.{File, FileOutputStream}
+import java.io.File
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
@@ -18,65 +18,75 @@ class Store {
 
     def writeToFile(neuralNetwork: NeuralNetwork, file: String): Unit = {
         val networkDTO = neuralNetwork.store()
-        val fle = new File(file)
-        if(!fle.exists()) {
-            fle.createNewFile()
-        }
-        objectMapper.writeValue(fle, networkDTO)
+        toFile(networkDTO, file)
     }
 
     def writeToFile(dataSet: DataSet, file: String): Unit = {
         val dataSetDTO = dataSet.store()
-        val fle = new File(file)
-        if(!fle.exists()) {
-            fle.createNewFile()
-        }
-        objectMapper.writeValue(fle, dataSetDTO)
+        toFile(dataSetDTO, file)
     }
 
-    def readDataSetFromFile(source: String, factory: () => DataSet): DataSet = {
-        val file = new File(source)
-        if (!file.exists()) {
-            return factory.apply()
+    private def toFile(obj: Any, file: String): Unit = {
+        val fle = new File(file)
+        if (!fle.exists()) {
+            fle.createNewFile()
         }
-        val dataSetDTO = objectMapper.readValue(file, classOf[DataSetDTO])
+        objectMapper.writeValue(fle, obj)
+    }
+
+    def readDataSetFromFile(path: String, factory: () => DataSet): DataSet = {
+        fromFile(path, factory, mapDataSet, classOf[DataSetDTO])
+    }
+
+    private def mapDataSet(dataSetDTO: DataSetDTO): DataSet = {
         val dataPoints = dataSetDTO.points
                 .map(p => DataPoint(p.inputs, p.output))
         DataSet(dataPoints)
     }
 
-    type InputMap = Map[Int, NeuronInput]
+    def readNeuralNetFromFile(path: String, factory: () => NeuralNetwork): NeuralNetwork = {
+        fromFile(path, factory, mapNetwork, classOf[NetworkDTO])
+    }
 
-    def readNeuralNetFromFile(source: String, factory: () => NeuralNetwork): NeuralNetwork = {
-        val file = new File(source)
+    private def fromFile[T, D](path: String, factory: () => T, mapper: D => T , clazz: Class[D]): T = {
+        val file = new File(path)
         if (!file.exists()) {
             return factory.apply()
         }
 
-        val networkDTO = objectMapper.readValue(file, classOf[NetworkDTO])
-        val nbOfInputNodes = networkDTO.layers(0).neurons(0).weights.size
+        val dto = objectMapper.readValue(file, clazz)
+        mapper(dto)
+    }
+
+    type InputMap = Map[Int, NeuronInput]
+
+    private def mapNetwork(networkDTO: NetworkDTO) : NeuralNetwork = {
+        val nbOfInputNodes = networkDTO
+                .layers.head
+                .neurons.head
+                .weights
+                .size
         val inputs = (0 until nbOfInputNodes)
                 .map(_ => new Input)
                 .toList
 
         val inputMap: InputMap = inputs
                 .zipWithIndex
-                .map { case (input, index) => (index, input) }
+                .map (_.swap)
                 .toMap
         val layers = processLayer(networkDTO.layers, Nil, inputMap)
 
-        new NeuralNetwork(inputs, layers.slice(0, layers.size - 1), layers.last.last)
+        new NeuralNetwork(inputs, layers)
     }
 
-
-    def processLayer(layers: List[LayerDTO], result: List[List[Neuron]], inputMap: InputMap): List[List[Neuron]] = layers match {
+    private def processLayer(layers: List[LayerDTO], result: List[List[Neuron]], inputMap: InputMap): List[List[Neuron]] = layers match {
         case Nil => result
         case head :: tail =>
             val (newInputMap, neurons) = processNeurons(head.neurons, Nil, inputMap)
             processLayer(tail, result ++ List(neurons), newInputMap)
     }
 
-    def processNeurons(neuronDtos: List[NeuronDTO], result: List[Neuron], inputMap: InputMap):
+    private def processNeurons(neuronDtos: List[NeuronDTO], result: List[Neuron], inputMap: InputMap):
     (Map[Int, NeuronInput], List[Neuron]) = neuronDtos match {
         case Nil => (inputMap, result)
         case head :: tail =>
