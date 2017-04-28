@@ -1,5 +1,7 @@
 package minesweeper.neural
 
+import org.junit.Test
+
 class NeuralNetworkTest {
     @Test
     def testGradients22(): Unit = {
