@@ -5,20 +5,27 @@ import javax.swing.JButton
 import rx.lang.scala.{Observable, Subscriber}
 
 class Minesweeper(val height: Int, val width: Int, val nbOfMines: Int) {
-    var failed = false
+    var block = false
+    var cells: List[List[Cell]] = null
 
-    val cells: List[List[Cell]] = (0 until width)
-            .map(_ => {
-                val cells = (0 until height)
-                        .map(_ => {
-                            val cell = new Cell()
-                            cell.number = 0
-                            cell
-                        })
-                        .toList
-                cells
-            }).toList
-    makeBomb(nbOfMines)
+    reset()
+
+    def reset(): Unit = {
+        block = false
+        cells = (0 until width)
+                .map(_ => {
+                    val cells = (0 until height)
+                            .map(_ => {
+                                val cell = new Cell()
+                                cell.number = 0
+                                cell
+                            })
+                            .toList
+                    cells
+                }).toList
+        makeBomb(nbOfMines)
+    }
+
 
     def makeBomb(todo: Int): Unit = todo match {
         case 0 =>
@@ -40,9 +47,9 @@ class Minesweeper(val height: Int, val width: Int, val nbOfMines: Int) {
             }
     }
 
-    var subscriber: Subscriber[OpenedEvent] = null
+    var subscriber: Subscriber[MinesweeperEvent] = null
 
-    def subscribe(): Observable[OpenedEvent] = {
+    def observable(): Observable[MinesweeperEvent] = {
         Observable.apply((sub) => {
             subscriber = sub
         })
@@ -53,24 +60,34 @@ class Minesweeper(val height: Int, val width: Int, val nbOfMines: Int) {
     }
 
     def click(x: Int, y: Int): Unit = {
-        if (failed) {
+        if (block) {
             return
         }
 
         val cell = cells(x)(y)
-        println("cell clicked " + cell)
 
         if (cell.exposed) {
             return
         }
         cell.exposed = true
 
-        subscriber.onNext(OpenedEvent(cell))
-        if (cell.number == 0) {
-            clickOpen(x, y)
+        if (subscriber != null) {
+            subscriber.onNext(OpenedEvent(cell))
         }
-        if (cell.number == -1) {
-            failed = true
+
+        cell.number match {
+            case 0 => clickOpen(x, y)
+            case -1 =>
+                if (subscriber != null) {
+                    subscriber.onNext(LostEvent())
+                }
+                block = true
+            case _ =>
+        }
+        if (hasWon()) {
+            if (subscriber != null) {
+                subscriber.onNext(WonEvent())
+            }
         }
     }
 
@@ -97,12 +114,27 @@ class Minesweeper(val height: Int, val width: Int, val nbOfMines: Int) {
                 .toList
         r
     }
+
+    def hasWon(): Boolean = {
+        val won = cells.flatten
+                .filter(_.number != -1)
+                .filter(!_.exposed)
+                .isEmpty
+        won
+
+    }
 }
 
 class Cell() {
     var exposed = false
-    var button: JButton = null
+    var button: JButton = _
     var number: Int = 0
 }
 
-case class OpenedEvent(cell: Cell)
+abstract sealed class MinesweeperEvent()
+
+case class LostEvent() extends MinesweeperEvent
+
+case class WonEvent() extends MinesweeperEvent
+
+case class OpenedEvent(cell: Cell) extends MinesweeperEvent

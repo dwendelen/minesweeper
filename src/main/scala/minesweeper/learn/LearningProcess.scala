@@ -22,7 +22,7 @@ class LearningProcess(stepFactor: Double, var dataSet: DataSet, val neuralNetwor
         }
     }
 
-    def addDataPoint(dataPoint: DataPoint): Unit = {
-        dataSet = DataSet(dataPoint :: dataSet.points)
+    def addDataPoints(dataPoints: List[DataPoint]): Unit = {
+        dataSet = DataSet(dataPoints ++ dataSet.points)
     }
 }

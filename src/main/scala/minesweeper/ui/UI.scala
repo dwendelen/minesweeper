@@ -1,31 +1,46 @@
 package minesweeper.ui
 
 import java.awt.event.ActionEvent
-import java.awt.{Dimension, GridLayout}
-import javax.swing.{JButton, JFrame}
+import java.awt.{Color, Dimension, GridLayout}
+import javax.swing.{JButton, JFrame, JOptionPane}
 
-import minesweeper.game.Minesweeper
+import minesweeper.game._
 import rx.lang.scala.Observable
 
 object UI {
     def main(args: Array[String]): Unit = {
-        new UI(new Minesweeper(16, 16, 40)).init()
-        .subscribe()
-        while(true) {
+        val minesweeper = new Minesweeper(16, 16, 30)
+        new UI(minesweeper)
+                .init()
+                .subscribe(e => e match {
+                    case click: ClickEvent =>
+                        minesweeper.click(click.x, click.y)
+                    case _ =>
+                })
+        while (true) {
 
         }
     }
+
 }
 
 class UI(minesweeper: Minesweeper) {
-
-    def init(): Observable[ClickEvent] = {
-        minesweeper.subscribe()
-                .subscribe(e => {
-                    e.cell.button.setEnabled(false)
-                    e.cell.button.setText(e.cell.number.toString)
-                })
+    def init(): Observable[UIEvent] = {
         val frame = new JFrame("FrameDemo")
+        minesweeper.observable()
+                .subscribe((ev: MinesweeperEvent) => ev match {
+                    case e: OpenedEvent =>
+                        val button = e.cell.button
+                        button.setForeground(Color.LIGHT_GRAY)
+                        button.setBackground(Color.LIGHT_GRAY)
+                        button.setEnabled(false)
+                        button.setText(e.cell.number.toString)
+                    case e: WonEvent =>
+                        JOptionPane.showMessageDialog(frame, "Won");
+                    case e: LostEvent =>
+                        JOptionPane.showMessageDialog(frame, "Lost");
+                })
+
 
         Observable.apply[ClickEvent](subscriber => {
             //2. Optional: What happens when the frame closes?
@@ -37,6 +52,9 @@ class UI(minesweeper: Minesweeper) {
                 y => (0 until minesweeper.width).foreach(
                     x => {
                         val button = new JButton("")
+                        button.setForeground(Color.BLUE)
+                        button.setBackground(Color.BLUE)
+                        button.setOpaque(true)
                         button.setPreferredSize(new Dimension(30, 30))
                         button.addActionListener((e: ActionEvent) => {
                             println(e)
@@ -54,11 +72,14 @@ class UI(minesweeper: Minesweeper) {
             frame.setVisible(true)
             //5. Show it.
         })
-                .doOnNext(click => {
-                    minesweeper.click(click.x, click.y)
-                })
+
 
     }
+
 }
 
-case class ClickEvent(x: Int, y: Int, button: JButton)
+abstract sealed class UIEvent()
+
+case class ClickEvent(x: Int, y: Int, button: JButton) extends UIEvent
+
+case class SendEvent() extends UIEvent
