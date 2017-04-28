@@ -1,5 +1,7 @@
 package minesweeper.neural
 
+import minesweeper.store.NeuronDTO
+
 class Neuron(val inputs: List[InputPair], val fixedValue: Weight) extends NeuronInput {
     def forward(): Unit = {
         applyActivation(sum())
@@ -29,14 +31,24 @@ class Neuron(val inputs: List[InputPair], val fixedValue: Weight) extends Neuron
 
     private def sigmoid(x: Double): Double = {
         1.0d / (1.0d + Math.exp(-x))
-        (Math.exp(x) - Math.exp(-x))/(Math.exp(x) + Math.exp(-x))
+        (Math.exp(x) - Math.exp(-x)) / (Math.exp(x) + Math.exp(-x))
     }
 
     private def dsigmoid(sigmoidOfTheSum: Double): Double = {
         //sigmoidOfTheSum * (1 - sigmoidOfTheSum)
         val x = sum()
-        1- sigmoidOfTheSum*sigmoidOfTheSum
+        1 - sigmoidOfTheSum * sigmoidOfTheSum
 
+    }
+
+    def store(neuronIdMap: Map[NeuronInput, Int]): NeuronDTO = {
+        NeuronDTO(neuronIdMap(this), fixedValue.value, storeInputs(neuronIdMap))
+    }
+
+    def storeInputs(neuronIdMap: Map[NeuronInput, Int]): Map[String, Double] = {
+        inputs.map(
+            inputPair => (neuronIdMap(inputPair.neuron).toString, inputPair.weight.value)
+        ).toMap
     }
 }
 

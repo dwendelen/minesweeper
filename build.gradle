@@ -30,6 +30,13 @@ dependencies {
 
     compile('io.reactivex:rxscala_2.12:0.26.5')
     compile('org.apache.commons:commons-lang3:3.0')
+// https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.8.6'
+    compile group: 'com.fasterxml.jackson.module', name: 'jackson-module-scala_2.12', version: '2.8.6'
+
+// https://mvnrepository.com/artifact/commons-io/commons-io
+    compile group: 'commons-io', name: 'commons-io', version: '2.5'
+
 
     testCompile('junit:junit:4.12')
     testCompile('org.assertj:assertj-core:3.6.2')

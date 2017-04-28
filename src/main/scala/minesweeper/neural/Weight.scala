@@ -1,9 +1,11 @@
 package minesweeper.neural
 
-class Weight extends NeuronInput {
-    value = 2*Math.random() - 1
+class Weight(initialValue: Double) extends NeuronInput {
+    value = initialValue
 
-    def step(factor: Double) = {
+    def this() = this(2 * Math.random() - 1)
+
+    def step(factor: Double): Unit = {
         value += factor * gradient
     }
 }
