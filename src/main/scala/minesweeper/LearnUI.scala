@@ -3,10 +3,10 @@ package minesweeper
 import javax.swing.JButton
 
 import minesweeper.game.Minesweeper
-import minesweeper.learn.{DataPoint, DataSet, LearningProcess}
+import minesweeper.learn.{DataSet, DataSetExtractor, LearningProcess}
 import minesweeper.neural.NeuralNetwork
 import minesweeper.store.Store
-import minesweeper.ui.{ClickEvent, SendEvent, UI}
+import minesweeper.ui.{ClickEvent, RandomEvent, SendEvent, UI}
 import rx.lang.scala.Observable
 import rx.lang.scala.schedulers.IOScheduler
 
@@ -14,18 +14,18 @@ import scala.concurrent.duration.Duration
 
 object LearnUI {
     val DATA_SET = "/Users/daanw/neural/dataset.json"
-    val NEURAL_NET = "/Users/daanw/neural/neuralnet.json"
+    val NEURAL_NET = "/Users/daanw/neural/neuralnet_20.json"
 
-    var pendingClickEvents: List[PendingClickEvent] = List()
+    var pendingClickEvents: List[PendingEvent] = List()
 
     val store = new Store()
 
     val dataSet = store.readDataSetFromFile(DATA_SET, () => DataSet(List()))
-    val neuralNet = store.readNeuralNetFromFile(NEURAL_NET, () => NeuralNetwork.createRandom(48, List(20, 20, 20)))
+    val neuralNet = store.readNeuralNetFromFile(NEURAL_NET, () => NeuralNetwork.createRandom(48, List(20)))
 
-    val process = new LearningProcess(0.1, dataSet, neuralNet)
+    val process = new LearningProcess(0.01, dataSet, neuralNet)
 
-    Observable.interval(Duration(1, scala.concurrent.duration.MINUTES))
+    Observable.interval(Duration(10, scala.concurrent.duration.SECONDS))
             .observeOn(IOScheduler.apply())
             .map(_ => store.writeToFile(process.neuralNetwork, NEURAL_NET))
             .subscribe()
@@ -35,15 +35,35 @@ object LearnUI {
 
     def main(args: Array[String]): Unit = {
 
-        new UI(minesweeper)
+        val ui = new UI(minesweeper, true)
+        ui
                 .init()
                 .subscribe(click => click match {
                     case click: ClickEvent =>
-                        val pendingE = PendingClickEvent(click.x, click.y, click.button)
-                        click.button.setText("1")
-                        pendingClickEvents = pendingE :: pendingClickEvents
+                        val pending = findPending(click.x, click.y)
+                        if(pending.isEmpty) {
+                            val pendingE = PendingClickEvent(click.x, click.y, click.button)
+                            click.button.setText("x")
+                            pendingClickEvents = pendingE :: pendingClickEvents
+                        } else {
+                            pending.get match {
+                                case c:PendingClickEvent =>
+                                    pendingClickEvents = pendingClickEvents.filter(_ != c)
+                                    val pendingE = PendingFlagEvent(click.x, click.y, click.button)
+                                    click.button.setText("V")
+                                    pendingClickEvents = pendingE::pendingClickEvents
+                                case f:PendingFlagEvent =>
+                                    pendingClickEvents = pendingClickEvents.filter(_ != f)
+                                    click.button.setText("")
+                            }
+                        }
                     case send: SendEvent =>
                         flushPending()
+                    case random: RandomEvent =>
+                        val clickable = DataSetExtractor.extractUsefullPoints(minesweeper)
+                        val index = Math.random() * clickable.size
+                        val coordinate = clickable(index.floor.toInt)
+                        minesweeper.click(coordinate._1, coordinate._2)
                 })
 
         while (true) {
@@ -51,52 +71,38 @@ object LearnUI {
         }
     }
 
-    def extractDataPoint(x: Int, y: Int): DataPoint = {
-        val area = ((x - 3) to (x + 3))
-                .flatMap(xi => {
-                    ((y - 3) to (y + 3))
-                            .map(yi => (xi, yi))
-                })
-                .filter { case (xi, yi) =>
-                    !(xi == x && yi == y)
-                }
-                .toList
-        val input: List[Double] = area.map {
-            case (xi, yi) =>
-                if (xi < 0 || xi >= minesweeper.width || yi < 0 || yi >= minesweeper.height) {
-                    0d
-                } else {
-                    val cell = minesweeper.cells(xi)(yi)
-                    if (!cell.exposed) {
-                        -1d
-                    } else {
-                        cell.number
-                    }
-                }
-        }
-        DataPoint(input, 1)
-    }
 
     def flushPending(): Unit = {
-        val allPoints: List[(Int, Int)] =
-            (0 until minesweeper.width).flatMap(x => {
-                (0 until minesweeper.height).map(y => {
-                    (x, y)
-                })
-            })
-                    .toList
-        val dataPoints = allPoints.map {
-            case (x, y) =>  extractDataPoint(x, y)
-        }
+        val coordinates = pendingClickEvents.map(e => (e.x, e.y))
+
+//        val dataPoints = pendingClickEvents.map(e =>{
+//            DataSetExtractor.extractDataPoint(minesweeper, e.x, e.y, Option(e))
+//        })
+        val dataPoints = DataSetExtractor.extractUsefullPoints(minesweeper)
+                .map {
+                    case (x, y) =>
+                        val event = findPending(x, y)
+                        DataSetExtractor.extractDataPoint(minesweeper, x, y, event)
+                }
 
         process.addDataPoints(dataPoints)
         store.writeToFile(process.dataSet, DATA_SET)
 
-        pendingClickEvents.foreach(e => {
-            e.button.setText("")
-            minesweeper.click(e.x, e.y)
-        })
+        pendingClickEvents.foreach {
+            case e: PendingClickEvent => minesweeper.click(e.x, e.y)
+            case e: PendingFlagEvent => minesweeper.flag(e.x, e.y)
+        }
+        pendingClickEvents = List()
+    }
+
+    private def findPending(x: Int, y: Int) = {
+        pendingClickEvents
+                .find(e => e.x == x && e.y == y)
     }
 }
 
-case class PendingClickEvent(x: Int, y: Int, button: JButton)
+sealed  class PendingEvent(val x: Int, val y: Int, val button: JButton)
+
+case class PendingClickEvent(x1: Int, y1: Int, button1: JButton) extends PendingEvent(x1, y1, button1)
+
+case class PendingFlagEvent(x1: Int, y1: Int, button1: JButton) extends PendingEvent(x1, y1, button1)

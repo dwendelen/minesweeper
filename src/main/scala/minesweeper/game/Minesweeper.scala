@@ -66,7 +66,7 @@ class Minesweeper(val height: Int, val width: Int, val nbOfMines: Int) {
 
         val cell = cells(x)(y)
 
-        if (cell.exposed) {
+        if (cell.exposed || cell.flag) {
             return
         }
         cell.exposed = true
@@ -88,6 +88,22 @@ class Minesweeper(val height: Int, val width: Int, val nbOfMines: Int) {
             if (subscriber != null) {
                 subscriber.onNext(WonEvent())
             }
+        }
+    }
+
+    def flag(x: Int, y: Int): Unit = {
+        if (block) {
+            return
+        }
+
+        val cell = cells(x)(y)
+
+        if (cell.exposed || cell.flag) {
+            return
+        }
+        cell.flag = true
+        if (subscriber != null) {
+            subscriber.onNext(FlaggedEvent(cell))
         }
     }
 
@@ -118,7 +134,7 @@ class Minesweeper(val height: Int, val width: Int, val nbOfMines: Int) {
     def hasWon(): Boolean = {
         val won = cells.flatten
                 .filter(_.number != -1)
-                .filter(!_.exposed)
+                .filter(cell => !(cell.exposed || cell.flag))
                 .isEmpty
         won
 
@@ -127,6 +143,7 @@ class Minesweeper(val height: Int, val width: Int, val nbOfMines: Int) {
 
 class Cell() {
     var exposed = false
+    var flag = false
     var button: JButton = _
     var number: Int = 0
 }
@@ -138,3 +155,4 @@ case class LostEvent() extends MinesweeperEvent
 case class WonEvent() extends MinesweeperEvent
 
 case class OpenedEvent(cell: Cell) extends MinesweeperEvent
+case class FlaggedEvent(cell: Cell) extends MinesweeperEvent

@@ -18,6 +18,9 @@ class LearningProcess(stepFactor: Double, var dataSet: DataSet, val neuralNetwor
 
             val value = neuralNetwork.evaluate()
             val difference = point.output - value
+            if(Math.random() < 0.001) {
+                println(difference)
+            }
             neuralNetwork.learn(stepFactor * difference)
         }
     }
