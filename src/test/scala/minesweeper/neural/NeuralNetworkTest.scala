@@ -14,7 +14,7 @@ class NeuralNetworkTest {
 
         testNetwork(network)
 
-        val networkDTO = network.store()
+        //val networkDTO = network.store()
 
     }
 
@@ -35,24 +35,32 @@ class NeuralNetworkTest {
     }
 
     @Test
-    def trainToZero(): Unit = {
-        val network = NeuralNetwork.createRandom(1, List(3, 3, 3))
-        //network.setInput(0, Math.random())
-
+    def simplesNetwork() : Unit = {
+        val network = NeuralNetwork.createRandom(1, List(1))
         for (i <- 0 until 20) {
-            val value = network.evaluate
-            println(value)
-            //network.learn(10 * -value)
+            val value = network.evaluate(List(1))
+            println(value(0))
+            network.learn(1, List(1))
+        }
+    }
+
+    @Test
+    def trainToOne(): Unit = {
+        val network = NeuralNetwork.createRandom(1, List(3,3,3, 1))
+        //network.setInput(0, )
+        for (i <- 0 until 20) {
+            val value = network.evaluate(List(1))
+            println(value(0))
+            network.learn(0.1, List(1))
         }
     }
 
 
     @Test
     def trainToSin(): Unit = {
-        val network = NeuralNetwork.createRandom(1, List(5))
+        val network = NeuralNetwork.createRandom(1, List(5, 1))
 
-        network.inputs.foreach(_.value = 0)
-        val n = 100000
+        val n = 10000
         val function = (x: Double) => Math.sin(x)
         val randomX = () => (Math.random() * 6) - 3
 
@@ -60,10 +68,9 @@ class NeuralNetworkTest {
             val x = randomX()
             val sinX = function(x)
 
-            //network.setInput(0, x)
-            val value = network.evaluate()
-            //val difference = sinX - value
-            //network.learn(0.1 * difference)
+            val value = network.evaluate(List(x))
+            val difference = sinX - value(0)
+            network.learn(0.1, List(sinX))
         }
         val store = new Store()
         store.writeToFile(network,"/tmp/sinStoreTest")
@@ -73,7 +80,7 @@ class NeuralNetworkTest {
             val sinX = function(x)
 
             //loadedNet.setInput(0, x)
-            val value = loadedNet.evaluate()
+            val value = loadedNet.evaluate(List(x))(0)
             print(x.toString.replace('.', ','))
             print('\t')
             print(sinX.toString.replace('.', ','))
@@ -84,30 +91,30 @@ class NeuralNetworkTest {
 
 
     def testNetwork(network: NeuralNetwork) = {
-        /*(network.inputs ++ network.weights)
-                .foreach(
-                    testGradient(network, _)
-                )*/
+//        (network.inputs ++ network.weights)
+//                .foreach(
+//                    testGradient(network, _)
+//                )
     }
 
 
-    def testGradient(network: NeuralNetwork, neuronInput: NeuronInput): Unit = {
-        val DELTA = 0.0001
-
-        val initialValue = network.evaluate()
-
-        network.learn(0)
-        val gradient = neuronInput.gradient
-
-        neuronInput.value += DELTA
-        val newValue = network.evaluate()
-
-        val actualDifference =0// newValue - initialValue
-        val expectedDifference = gradient * DELTA
-
-        println(expectedDifference)
-        println(actualDifference)
+    //def testGradient(network: NeuralNetwork, neuronInput: NeuronInput): Unit = {
+//        val DELTA = 0.0001
+//
+//        val initialValue = network.evaluate()
+//
+//        network.learn(0)
+//        val gradient = neuronInput.gradient
+//
+//        neuronInput.value += DELTA
+//        val newValue = network.evaluate()
+//
+//        val actualDifference =0// newValue - initialValue
+//        val expectedDifference = gradient * DELTA
+//
+//        println(expectedDifference)
+//        println(actualDifference)
 
         //Assertions.assertThat(actualDifference).isCloseTo(expectedDifference, Percentage.withPercentage(0.1))
-    }
+    //}
 }

@@ -45,10 +45,10 @@ class Store {
     }
 
     def readNeuralNetFromFile(path: String, factory: () => NeuralNetwork): NeuralNetwork = {
-        fromFile(path, factory, mapNetwork, classOf[NetworkDTO])
+        fromFile(path, factory, l => new NeuralNetwork(l), classOf[List[List[List[Double]]]])
     }
 
-    private def fromFile[T, D](path: String, factory: () => T, mapper: D => T , clazz: Class[D]): T = {
+    private def fromFile[T, D](path: String, factory: () => T, mapper: D => T, clazz: Class[D]): T = {
         val file = new File(path)
         if (!file.exists()) {
             return factory.apply()
@@ -56,48 +56,5 @@ class Store {
 
         val dto = objectMapper.readValue(file, clazz)
         mapper(dto)
-    }
-
-    type InputMap = Map[Int, NeuronInput]
-
-    private def mapNetwork(networkDTO: NetworkDTO) : NeuralNetwork = {
-        val nbOfInputNodes = networkDTO
-                .layers.head
-                .neurons.head
-                .weights
-                .size
-        val inputs = (0 until nbOfInputNodes)
-                .map(_ => new Input)
-                .toList
-
-        val inputMap: InputMap = inputs
-                .zipWithIndex
-                .map (_.swap)
-                .toMap
-        val layers = processLayer(networkDTO.layers, Nil, inputMap)
-
-        new NeuralNetwork(inputs, layers)
-    }
-
-    private def processLayer(layers: List[LayerDTO], result: List[List[Neuron]], inputMap: InputMap): List[List[Neuron]] = layers match {
-        case Nil => result
-        case head :: tail =>
-            val (newInputMap, neurons) = processNeurons(head.neurons, Nil, inputMap)
-            processLayer(tail, result ++ List(neurons), newInputMap)
-    }
-
-    private def processNeurons(neuronDtos: List[NeuronDTO], result: List[Neuron], inputMap: InputMap):
-    (Map[Int, NeuronInput], List[Neuron]) = neuronDtos match {
-        case Nil => (inputMap, result)
-        case head :: tail =>
-            val weight = new Weight(head.weight)
-            val inputPairs = head.weights
-                    .map { case (inputIndex: String, weight: Double) =>
-                        val neuronInput = inputMap(inputIndex.toInt)
-                        InputPair(neuronInput, new Weight(weight))
-                    }
-                    .toList
-            val neuron = new Neuron(inputPairs, weight)
-            processNeurons(tail, result ++ List(neuron), inputMap + (head.id -> neuron))
     }
 }

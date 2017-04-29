@@ -36,7 +36,7 @@ dependencies {
 
 // https://mvnrepository.com/artifact/commons-io/commons-io
     compile group: 'commons-io', name: 'commons-io', version: '2.5'
-
+    compile 'org.jblas:jblas:1.2.4'
 
     testCompile('junit:junit:4.12')
     testCompile('org.assertj:assertj-core:3.6.2')

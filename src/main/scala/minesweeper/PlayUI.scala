@@ -33,13 +33,8 @@ object PlayUI {
         val actionPoint: (Int, Int, List[Double]) = points.map {
             case (x, y) =>
                 val point = DataSetExtractor.extractDataPoint(minesweeper, x, y, Option.empty)
-                point.inputs
-                        .zipWithIndex
-                        .foreach { case (input, index) =>
-                            //neuralNet.setInput(index, input)
-                        }
 
-                (x, y, neuralNet.evaluate())
+                (x, y, neuralNet.evaluate(point.inputs))
 
         }
                 .minBy(p =>1/* Math.min(Math.abs(p._3 - 1), Math.abs(p._3 + 1))*/)

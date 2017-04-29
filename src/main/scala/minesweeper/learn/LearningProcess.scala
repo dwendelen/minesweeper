@@ -10,17 +10,12 @@ class LearningProcess(stepFactor: Double, var dataSet: DataSet, val neuralNetwor
             val index = (Math.random() * dataSet.points.size).toInt
             val dataPoint = dataSet.points(index)
 
-            neuralNetwork.setInput(dataPoint.inputs)
+            neuralNetwork.evaluate(dataPoint.inputs)
+            val errors = neuralNetwork.learn(stepFactor, dataPoint.output)
 
-            val values = neuralNetwork.evaluate()
-            val error = dataPoint.output
-                    .zip(values)
-                    .map{case (dataPointOutput, value) => dataPointOutput - value}
-                    .sum
             if (Math.random() < 0.001) {
-                println(error)
+                println(errors)
             }
-            neuralNetwork.learn(stepFactor * error)
         }
     }
 
