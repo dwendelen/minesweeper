@@ -14,7 +14,7 @@ object UI {
                 .init()
                 .subscribe(e => e match {
                     case click: ClickEvent =>
-                        minesweeper.click(click.x, click.y)
+                        //minesweeper.explore(click.x, click.y)
                     case _ =>
                 })
         while (true) {
@@ -28,21 +28,21 @@ class UI(minesweeper: Minesweeper, learn: Boolean, play: Boolean = false) {
     def init(): Observable[UIEvent] = {
         val frame = new JFrame("FrameDemo")
         minesweeper.observable()
-                .subscribe((ev: MinesweeperEvent) => ev match {
-                    case e: ExposedEvent =>
-                        val button = e.cell.button
-                        button.setForeground(Color.LIGHT_GRAY)
-                        button.setBackground(Color.LIGHT_GRAY)
-                        button.setEnabled(false)
-                        button.setText(e.cell.number.toString)
-                    case e: FlaggedEvent =>
-                        val button = e.cell.button
-                        button.setText("F")
-                    case e: WonEvent =>
-                        JOptionPane.showMessageDialog(frame, "Won");
-                    case e: LostEvent =>
-                        JOptionPane.showMessageDialog(frame, "Lost");
-                })
+//                .subscribe((ev: MinesweeperEvent) => ev match {
+//                    case e: ExposedEvent =>
+//                        val button = e.cell.button
+//                        button.setForeground(Color.LIGHT_GRAY)
+//                        button.setBackground(Color.LIGHT_GRAY)
+//                        button.setEnabled(false)
+//                        button.setText(e.cell.number.toString)
+//                    case e: FlaggedEvent =>
+//                        val button = e.cell.button
+//                        button.setText("F")
+//                    case e: WonEvent =>
+//                        JOptionPane.showMessageDialog(frame, "Won");
+//                    case e: LostEvent =>
+//                        JOptionPane.showMessageDialog(frame, "Lost");
+//                })
 
 
         Observable.apply[UIEvent](subscriber => {
@@ -62,7 +62,7 @@ class UI(minesweeper: Minesweeper, learn: Boolean, play: Boolean = false) {
                         button.addActionListener((e: ActionEvent) => {
                             subscriber.onNext(ClickEvent(x, y, button))
                         })
-                        minesweeper.setButton(x, y, button)
+//                        minesweeper.setButton(x, y, button)
                         frame.add(button)
                     }
                 )

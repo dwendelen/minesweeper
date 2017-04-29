@@ -24,30 +24,30 @@ object PlayUI {
                     case send: SendEvent =>
                     case random: RandomEvent =>
                 })
-        minesweeper.click(8, 8)
+        //minesweeper.explore(8, 8)
     }
 
 
     def doMove(): Unit = {
         val points = DataSetExtractor.extractUsefullPoints(minesweeper)
-        val actionPoint: (Int, Int, Double) = points.map {
+        val actionPoint: (Int, Int, List[Double]) = points.map {
             case (x, y) =>
                 val point = DataSetExtractor.extractDataPoint(minesweeper, x, y, Option.empty)
                 point.inputs
                         .zipWithIndex
                         .foreach { case (input, index) =>
-                            neuralNet.setInput(index, input)
+                            //neuralNet.setInput(index, input)
                         }
 
                 (x, y, neuralNet.evaluate())
 
         }
-                .minBy(p => Math.min(Math.abs(p._3 - 1), Math.abs(p._3 + 1)))
+                .minBy(p =>1/* Math.min(Math.abs(p._3 - 1), Math.abs(p._3 + 1))*/)
 
-        if (actionPoint._3 > 0) {
-            minesweeper.click(actionPoint._1, actionPoint._2)
+        if (actionPoint._3(0) > 0) {
+            //minesweeper.explore(actionPoint._1, actionPoint._2)
         } else {
-            minesweeper.flag(actionPoint._1, actionPoint._2)
+            //minesweeper.flag(actionPoint._1, actionPoint._2)
         }
     }
 }

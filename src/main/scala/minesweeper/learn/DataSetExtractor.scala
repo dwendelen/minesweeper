@@ -20,14 +20,15 @@ object DataSetExtractor {
                 if (xi < 0 || xi >= minesweeper.width || yi < 0 || yi >= minesweeper.height) {
                     -1d
                 } else {
-                    val cell = minesweeper.cells(xi)(yi)
-                    if (cell.flag) {
-                        -5d
-                    } else if (!cell.exposed) {
-                        -1d
-                    } else {
-                        cell.number
-                    }
+//                    val cell = minesweeper.cells(xi)(yi)
+//                    if (cell.flag) {
+//                        -5d
+//                    } else if (!cell.exposed) {
+//                        -1d
+//                    } else {
+//                        cell.number
+//                    }
+                    356785d
                 }
         }
         val value = if (event.isDefined) {
@@ -38,7 +39,7 @@ object DataSetExtractor {
         } else {
             0d
         }
-        DataPoint(input, value)
+        DataPoint(input, List(value))
     }
 
     def extractUsefullPoints(minesweeper: Minesweeper): List[(Int, Int)] = {
@@ -49,7 +50,7 @@ object DataSetExtractor {
                 })
             }).toList
         allPoints.filter {
-            case (x, y) => !(minesweeper.cells(x)(y).exposed || minesweeper.cells(x)(y).flag)
+            _=> true        //case (x, y) => !(minesweeper.cells(x)(y).exposed || minesweeper.cells(x)(y).flag)
         }
     }
 }

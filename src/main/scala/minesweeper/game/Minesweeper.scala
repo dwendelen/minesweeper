@@ -1,112 +1,115 @@
 package minesweeper.game
 
-import javax.swing.JButton
-
-import rx.lang.scala.{Observable, Subscriber}
+import rx.lang.scala.Observable
+import rx.lang.scala.subjects.PublishSubject
 
 class Minesweeper(val height: Int, val width: Int, val nbOfMines: Int) {
-    var block = false
-    var cells: List[List[Cell]] = null
-
-    reset()
+    private var cells: List[List[Cell]] = null
+    private val subject = PublishSubject[MinesweeperEvent]()
+    private var blocked = false
 
     def reset(): Unit = {
-        block = false
-        cells = (0 until width).map(_ => {
-            (0 until height).map(_ => {
-                new Cell()
-            }).toList
-        }).toList
+        cells = List.tabulate(width, height)((_, _) => new Cell())
         makeBombs(nbOfMines)
+        blocked = false
+        subject.onNext(GameResetEvent())
     }
 
-    def makeBombs(nbOfBombsToDo: Int): Unit = nbOfBombsToDo match {
+    private def makeBombs(nbOfBombsToDo: Int): Unit = nbOfBombsToDo match {
         case 0 =>
         case _ =>
             val x = (Math.random() * width).floor.toInt
             val y = (Math.random() * height).floor.toInt
-            val cell = cells(x)(y)
-            if (cell.number == Cell.BOMB) {
+            val potentialNewBomb = cells(x)(y)
+            if (potentialNewBomb.number == Cell.BOMB) {
                 makeBombs(nbOfBombsToDo)
             } else {
-                cell.number = Cell.BOMB
-                getNeighbours(x, y)
-                        .map { case (xc: Int, yc: Int) =>
-                            cells(xc)(yc)
-                        }
+                potentialNewBomb.number = Cell.BOMB
+                getNeighbours(Coordinate(x, y))
+                        .map(cellAt)
                         .filter(!_.bomb)
                         .foreach(_.number += 1)
                 makeBombs(nbOfBombsToDo - 1)
             }
     }
 
-    var subscriber: Subscriber[MinesweeperEvent] = null
+    reset()
+
+    private def cellAt(coordinate: Coordinate): Cell = cells(coordinate.x)(coordinate.y)
 
     def observable(): Observable[MinesweeperEvent] = {
-        Observable.apply((sub) => {
-            subscriber = sub
-        })
+        subject
     }
 
-    def setButton(x: Int, y: Int, button: JButton): Unit = {
-        cells(x)(y).button = button
+    def execute(cmd: MinesweeperCommand): Unit = {
+        if (blocked) {
+            return
+        }
+        val cell = cellAt(cmd.coordinate)
+        if (cell.exposed != cmd.expectsExposed) {
+            return
+        }
+        cmd match {
+            case _: ExploreCommand =>
+                exploreUnexposed(cmd.coordinate, cell)
+            case _: FlagCommand =>
+                if (!cell.flag) {
+                    cell.flag = true
+                    subject.onNext(FlaggedEvent(cmd.coordinate))
+                }
+            case _: UnflagCommand =>
+                if (cell.flag) {
+                    cell.flag = false
+                    subject.onNext(UnflaggedEvent(cmd.coordinate))
+                }
+            case _: ExploreNeighboursCommand =>
+                val nbOfFlagsAround = getNeighbours(cmd.coordinate)
+                        .count(cellAt(_).flag)
+                if (nbOfFlagsAround == cell.number) {
+                    exploreNeighbours(cmd.coordinate)
+                }
+        }
     }
 
-    def click(x: Int, y: Int): Unit = {
-        doIfClickable(x, y, cell => {
-            cell.exposed = true
-            notify(ExposedEvent(cell))
-
-            cell.number match {
-                case 0 => clickOpen(x, y)
-                case Cell.BOMB =>
-                    block = true
-                    notify(LostEvent())
-                case _ =>
-            }
-            if (playerHasWon()) {
-                notify(WonEvent())
-            }
-        })
+    private def explore(coordinate: Coordinate): Unit = {
+        execute(ExploreCommand(coordinate))
     }
 
-    def flag(x: Int, y: Int): Unit = {
-        doIfClickable(x, y, cell => {
-            cell.flag = true
-            notify(FlaggedEvent(cell))
-        })
-    }
-
-    def doIfClickable(x: Int, y: Int, todo: Cell => Unit): Unit = {
-        if (block) {
+    private def exploreUnexposed(coordinate: Coordinate, unexposedCell: Cell): Unit = {
+        if (unexposedCell.flag) {
             return
         }
 
-        val cell = cells(x)(y)
-
-        if (!cell.clickable) {
-            return
+        unexposedCell.exposed = true
+        subject.onNext(ExposedEvent(unexposedCell.number, coordinate))
+        unexposedCell.number match {
+            case 0 => exploreNeighbours(coordinate)
+            case Cell.BOMB =>
+                blocked = true
+                subject.onNext(LostEvent())
+            case _ =>
+        }
+        if (playerHasWon()) {
+            blocked = true
+            subject.onNext(WonEvent())
         }
     }
 
-    def clickOpen(x: Int, y: Int): Unit = {
-        getNeighbours(x, y).foreach {
-            case (xn, yn) => click(xn, yn)
-        }
+    private def exploreNeighbours(coordinate: Coordinate): Unit = {
+
+        getNeighbours(coordinate).foreach(explore)
     }
 
-    def getNeighbours(x: Int, y: Int): List[(Int, Int)] = {
-        val grid =
-            ((x - 1) to (x + 1)).flatMap(x =>
-                ((y - 1) to (y + 1)).map(y => (x, y))
-            )
-        grid
-            .filter(_ != (x, y))
-            .filter(coordinate => withinField(coordinate._1, coordinate._2))
-            .toList
+    private def getNeighbours(coor: Coordinate): List[Coordinate] = {
+        Coordinate.tabulate(coor, 1)
+                .flatten
+                .filter(_ != coor)
+                .filter(coordinate => withinField(coordinate))
     }
 
-    def withinField(x: Int, y: Int): Boolean = {
+    def withinField(coordinate: Coordinate): Boolean = {
+        val x = coordinate.x
+        val y = coordinate.y
         x >= 0 &&
                 x < width &&
                 y >= 0 &&
@@ -114,14 +117,9 @@ class Minesweeper(val height: Int, val width: Int, val nbOfMines: Int) {
     }
 
     def playerHasWon(): Boolean = {
-        cells
+        val hasMovesLeft = cells
                 .flatten
-                .exists(p => !p.bomb && p.clickable)
-    }
-
-    def notify(event: MinesweeperEvent): Unit = {
-        if (subscriber != null) {
-            subscriber.onNext(event)
-        }
+                .exists(p => !p.exposed && !p.bomb)
+        !hasMovesLeft
     }
 }
