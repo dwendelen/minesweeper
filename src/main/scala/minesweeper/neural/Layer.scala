@@ -26,26 +26,6 @@ class Layer(var lastInput: DoubleMatrix,
         weights.transpose().mmul(factor)
     }
 
-    def learnLastLayer(stepFactor: Double, row: Int): DoubleMatrix = {
-        val weightForRow = weights.getRow(row)
-        val fixedForRow = fixedWeights.getRow(row)
-        val outputForRow = lastOutput.getRow(row)
-        val gradient = DoubleMatrix.ones(1)
-
-        val factor = dtanh(outputForRow).mul(gradient)
-        val Gw = factor.mmul(lastInput.transpose())
-
-        //W = stepFactor*Gw + W
-        SimpleBlas.axpy(stepFactor, Gw, weightForRow)
-        weights.putRow(row, weightForRow)
-        SimpleBlas.axpy(stepFactor, factor, fixedForRow)
-        fixedWeights.putRow(row, fixedForRow)
-
-
-        weights.transpose().mmul(factor)
-    }
-
-
     private def tanh(x: Double): Double = {
         val ex = Math.exp(x)
         val eMinusx = 1.0d / ex

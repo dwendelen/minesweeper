@@ -25,21 +25,15 @@ class NeuralNetwork(weights: List[List[List[Double]]]) {
         output.data.toList
     }
 
-    def learn(stepFactor: Double, expectedOutputs: List[Double]): List[Double] = {
+    def learn(stepFactor: Double, expectedValue: Double): Double = {
         val outputLayer = layers.last
-        val outputs = outputLayer.lastOutput
+        val output = outputLayer.lastOutput.data(0)
 
-        expectedOutputs
-                .zipWithIndex
-                .map { case (expectedValue, row) =>
-                    val error = expectedValue - outputs.data(row)
-                    val step = error * stepFactor
+        val error = expectedValue - output
+        val step = error * stepFactor
 
-                    val gradientLastHiddenLayer = outputLayer.learnLastLayer(step, row)
-                    layers.slice(0, layers.size - 1)
-                            .foldRight(gradientLastHiddenLayer)((layer, grad) => layer.learn(step, grad))
-                    error
-                }
+        layers.foldRight(new DoubleMatrix(Array(1d)))((layer, grad) => layer.learn(step, grad))
+        error
     }
 
 

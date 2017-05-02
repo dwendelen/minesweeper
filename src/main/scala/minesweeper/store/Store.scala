@@ -28,9 +28,14 @@ class Store {
 
     private def toFile(obj: Any, file: String): Unit = {
         val fle = new File(file)
-        if (!fle.exists()) {
-            fle.createNewFile()
+        if (fle.exists()) {
+            val bak = new File(file + ".bak")
+            if(bak.exists()) {
+                bak.delete()
+            }
+            fle.renameTo(bak)
         }
+        fle.createNewFile()
         objectMapper.writeValue(fle, obj)
     }
 

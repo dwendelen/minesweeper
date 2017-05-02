@@ -1,15 +1,16 @@
 package minesweeper.game
 
+import minesweeper.util.{Coordinate, Grid}
 import rx.lang.scala.Observable
 import rx.lang.scala.subjects.PublishSubject
 
 class Minesweeper(val height: Int, val width: Int, val nbOfMines: Int) {
-    private var cells: List[List[Cell]] = null
+    var cells: Grid[Cell] = null
     private val subject = PublishSubject[MinesweeperEvent]()
     private var blocked = false
 
     def reset(): Unit = {
-        cells = List.tabulate(width, height)((_, _) => new Cell())
+        cells = Grid.tabulate(width, height)((x, y) => new Cell(Coordinate(x, y)))
         makeBombs(nbOfMines)
         blocked = false
         subject.onNext(GameResetEvent())
@@ -20,7 +21,7 @@ class Minesweeper(val height: Int, val width: Int, val nbOfMines: Int) {
         case _ =>
             val x = (Math.random() * width).floor.toInt
             val y = (Math.random() * height).floor.toInt
-            val potentialNewBomb = cells(x)(y)
+            val potentialNewBomb = cells(x,y)
             if (potentialNewBomb.number == Cell.BOMB) {
                 makeBombs(nbOfBombsToDo)
             } else {
@@ -35,7 +36,13 @@ class Minesweeper(val height: Int, val width: Int, val nbOfMines: Int) {
 
     reset()
 
-    private def cellAt(coordinate: Coordinate): Cell = cells(coordinate.x)(coordinate.y)
+    def cellAt(coordinate: Coordinate): Cell = {
+        if (withinField(coordinate)) {
+            cells(coordinate)
+        } else {
+            null
+        }
+    }
 
     def observable(): Observable[MinesweeperEvent] = {
         subject
@@ -51,16 +58,16 @@ class Minesweeper(val height: Int, val width: Int, val nbOfMines: Int) {
         }
         cmd match {
             case _: ExploreCommand =>
-                exploreUnexposed(cmd.coordinate, cell)
+                exploreUnexposed(cell)
             case _: FlagCommand =>
                 if (!cell.flag) {
                     cell.flag = true
-                    subject.onNext(FlaggedEvent(cmd.coordinate))
+                    subject.onNext(FlaggedEvent(cell))
                 }
             case _: UnflagCommand =>
                 if (cell.flag) {
                     cell.flag = false
-                    subject.onNext(UnflaggedEvent(cmd.coordinate))
+                    subject.onNext(UnflaggedEvent(cell))
                 }
             case _: ExploreNeighboursCommand =>
                 val nbOfFlagsAround = getNeighbours(cmd.coordinate)
@@ -75,15 +82,15 @@ class Minesweeper(val height: Int, val width: Int, val nbOfMines: Int) {
         execute(ExploreCommand(coordinate))
     }
 
-    private def exploreUnexposed(coordinate: Coordinate, unexposedCell: Cell): Unit = {
+    private def exploreUnexposed(unexposedCell: Cell): Unit = {
         if (unexposedCell.flag) {
             return
         }
 
         unexposedCell.exposed = true
-        subject.onNext(ExposedEvent(unexposedCell.number, coordinate))
+        subject.onNext(ExposedEvent(unexposedCell))
         unexposedCell.number match {
-            case 0 => exploreNeighbours(coordinate)
+            case 0 => exploreNeighbours(unexposedCell.coordinate)
             case Cell.BOMB =>
                 blocked = true
                 subject.onNext(LostEvent())
@@ -96,7 +103,6 @@ class Minesweeper(val height: Int, val width: Int, val nbOfMines: Int) {
     }
 
     private def exploreNeighbours(coordinate: Coordinate): Unit = {
-
         getNeighbours(coordinate).foreach(explore)
     }
 
@@ -118,7 +124,6 @@ class Minesweeper(val height: Int, val width: Int, val nbOfMines: Int) {
 
     def playerHasWon(): Boolean = {
         val hasMovesLeft = cells
-                .flatten
                 .exists(p => !p.exposed && !p.bomb)
         !hasMovesLeft
     }
