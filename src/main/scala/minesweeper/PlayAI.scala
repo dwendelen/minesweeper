@@ -25,27 +25,33 @@ object PlayAI {
         val inputExtractor = new InputExtractor(minesweeper)
         while (true) {
             val explorables = inputExtractor.extractExplorablesWithExposedNeighbours()
+            val cmd =
             if (explorables.isEmpty) {
-                minesweeper.execute(ExploreCommand(inputExtractor.random()))
+                ExploreCommand(inputExtractor.random())
             } else {
                 val coordinate = explorables
                     .maxBy(c => {
                         val area = inputExtractor.extractArea(c)
                         val input = InputExtractor.mapToInput(area)
-                        neuralNets(0).evaluate(input)
+                        if(ignoreFirstNetwork)
+                            Math.abs(neuralNets(1).evaluate(input))
+                        else
+                            neuralNets(0).evaluate(input)
                     })
 
                 val area = inputExtractor.extractArea(coordinate)
                 val input = InputExtractor.mapToInput(area)
                 val action = neuralNets(1).evaluate(input)
                 if (action > 0) {
-                    minesweeper.execute(FlagCommand(coordinate))
+                    FlagCommand(coordinate)
                 } else {
-                    minesweeper.execute(ExploreCommand(coordinate))
+                    ExploreCommand(coordinate)
                 }
             }
-            Thread.sleep(1000)
-
+            Thread.sleep(500)
+            playWindow.markAsNextMove(cmd.coordinate)
+            Thread.sleep(500)
+            minesweeper.execute(cmd)
         }
     }
 }

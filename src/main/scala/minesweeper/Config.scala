@@ -27,4 +27,5 @@ object Config {
             NeuralNetwork.createRandom(100, List(1000, 1)),
             NeuralNetwork.createRandom(100, List(300, 300, 1))
         )
+    val ignoreFirstNetwork = false
 }

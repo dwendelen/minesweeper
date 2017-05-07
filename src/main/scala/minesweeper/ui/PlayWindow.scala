@@ -3,7 +3,7 @@ package minesweeper.ui
 import javax.swing.{JFrame, JOptionPane}
 
 import minesweeper.game.{Cell, LostEvent, Minesweeper, WonEvent}
-import minesweeper.util.Grid
+import minesweeper.util.{Coordinate, Grid}
 
 class PlayWindow(cells: Grid[Cell]) {
     private val bombField = new MineField(cells)
@@ -32,5 +32,9 @@ class PlayWindow(cells: Grid[Cell]) {
 
     def observeGame(minesweeper: Minesweeper): Unit = {
         bombField.observeGame(minesweeper)
+    }
+
+    def markAsNextMove(coordinate: Coordinate) : Unit = {
+        bombField.markButton(coordinate, "...")
     }
 }
