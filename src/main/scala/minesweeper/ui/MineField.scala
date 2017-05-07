@@ -1,7 +1,7 @@
 package minesweeper.ui
 
 import java.awt.event.{MouseAdapter, MouseEvent}
-import java.awt.{Color, Container, Dimension, GridLayout}
+import java.awt._
 import javax.swing.JButton
 
 import minesweeper.game._
@@ -26,12 +26,14 @@ class MineField(width: Int, height: Int) {
 
     private def createButton(): Button = {
         val jbutton = new JButton()
+        jbutton.setMargin(new Insets(0, 0, 0, 0))
+
         val button = Button(jbutton, null)
 
         jbutton.setOpaque(true)
         jbutton.setPreferredSize(new Dimension(30, 30))
         jbutton.setForeground(Color.BLUE)
-        jbutton.setBackground(Color.BLUE)
+        //jbutton.setBackground(Color.BLUE)
         jbutton.setEnabled(true)
 
         jbutton.addMouseListener(new MouseAdapter {
@@ -112,11 +114,11 @@ class MineField(width: Int, height: Int) {
 
         if (cell.exposed) {
             button.setForeground(Color.LIGHT_GRAY)
-            button.setBackground(Color.LIGHT_GRAY)
+            //button.setBackground(Color.LIGHT_GRAY)
             button.setEnabled(false)
         } else {
             button.setForeground(Color.BLUE)
-            button.setBackground(Color.BLUE)
+            //button.setBackground(Color.BLUE)
             button.setEnabled(true)
         }
     }

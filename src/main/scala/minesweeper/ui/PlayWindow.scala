@@ -27,6 +27,10 @@ class PlayWindow(cells: Grid[Cell]) {
         })
 
         bombField.controlGame(minesweeper)
+        observeGame(minesweeper)
+    }
+
+    def observeGame(minesweeper: Minesweeper): Unit = {
         bombField.observeGame(minesweeper)
     }
 }

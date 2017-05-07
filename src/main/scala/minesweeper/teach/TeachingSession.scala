@@ -44,10 +44,11 @@ class TeachingSession(minesweeper: Minesweeper) {
 
     private def doANewGame(): Unit = {
         minesweeper.reset()
-        doNextFrame()
+        setUpNextFrame()
+        doNextScenario()
     }
 
-    private def doNextFrame(): Unit = {
+    private def setUpNextFrame(): Unit = {
         recordedCommands.foreach(minesweeper.execute)
 
         if (recordedCommands.isEmpty) {
@@ -55,25 +56,19 @@ class TeachingSession(minesweeper: Minesweeper) {
             minesweeper.execute(ExploreCommand(randomCoordinate))
         }
 
-        val scenarios = inputExtractor.extractExplorables()
+        val scenarios = inputExtractor.extractExplorablesWithExposedNeighbours()
                 .map(inputExtractor.extractArea)
-                .map(new Grid(_))
         todo = Random.shuffle(scenarios)
-        doNextScenario()
     }
 
     private def doNextScenario(): Unit = todo match {
         case Nil =>
-            doNextFrame()
+            setUpNextFrame()
+            doNextScenario()
         case newScenario :: otherScenarios =>
             todo = otherScenarios
             currentScenario = newScenario
-
-            if (noneOfTheNeighboursAreExposed(newScenario)) {
-                doNextScenario()
-            } else {
-                scenarios.onNext(currentScenario)
-            }
+            scenarios.onNext(currentScenario)
     }
 
     private def noneOfTheNeighboursAreExposed(newScenario: Scenario) = {

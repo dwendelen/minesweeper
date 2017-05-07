@@ -39,8 +39,8 @@ class NeuralNetworkTest {
         val network = NeuralNetwork.createRandom(1, List(1))
         for (i <- 0 until 20) {
             val value = network.evaluate(List(1))
-            println(value(0))
-            network.learn(1, List(1))
+            println(value)
+            network.learn(1, 1)
         }
     }
 
@@ -50,8 +50,8 @@ class NeuralNetworkTest {
         //network.setInput(0, )
         for (i <- 0 until 20) {
             val value = network.evaluate(List(1))
-            println(value(0))
-            network.learn(0.1, List(1))
+            println(value)
+            network.learn(0.1, 1)
         }
     }
 
@@ -69,18 +69,18 @@ class NeuralNetworkTest {
             val sinX = function(x)
 
             val value = network.evaluate(List(x))
-            val difference = sinX - value(0)
-            network.learn(0.1, List(sinX))
+            val difference = sinX - value
+            network.learn(0.1, sinX)
         }
         val store = new Store()
-        store.writeToFile(network,"/tmp/sinStoreTest")
-        val loadedNet = store.readNeuralNetFromFile("/tmp/sinStoreTest", () => null)
+        store.writeToFile(List(network),"/tmp/sinStoreTest")
+        val loadedNet = store.readNeuralNetFromFile("/tmp/sinStoreTest", () => null)(0)
         for (i <- 0 until 100) {
             val x = randomX()
             val sinX = function(x)
 
             //loadedNet.setInput(0, x)
-            val value = loadedNet.evaluate(List(x))(0)
+            val value = loadedNet.evaluate(List(x))
             print(x.toString.replace('.', ','))
             print('\t')
             print(sinX.toString.replace('.', ','))

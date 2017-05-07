@@ -2,10 +2,10 @@ package minesweeper.neural
 
 import org.jblas.{DoubleMatrix, SimpleBlas}
 
-class Layer(var lastInput: DoubleMatrix,
-            var weights: DoubleMatrix,
-            var fixedWeights: DoubleMatrix,
-            var lastOutput: DoubleMatrix) {
+class Layer(var weights: DoubleMatrix,
+            var fixedWeights: DoubleMatrix) {
+    var lastInput: DoubleMatrix = _
+    var lastOutput: DoubleMatrix = _
 
     def forward(input: DoubleMatrix): DoubleMatrix = {
         lastInput = input

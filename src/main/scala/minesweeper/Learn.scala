@@ -22,34 +22,30 @@ object Learn {
         val learningProcess = setUpLearningProcess(dataSet)
 
         while (true) {
-            val error1 = learningProcess._1.tick()
-            val error2 = learningProcess._2.tick()
-            if(Math.random() < 0.001) {
-                    println(error1, error2)
+            val error = learningProcess.tick()
+            if (Math.random() < 0.001) {
+                println(error)
             }
         }
     }
 
     private def setUpLearningProcess(dataSet: DataSet) = {
-        val neuralNet_1 = store.readNeuralNetFromFile(NEURAL_NET_1, INITIAL_NETWORK_FACTORY)
-        val neuralNet_2 = store.readNeuralNetFromFile(NEURAL_NET_2, INITIAL_NETWORK_FACTORY)
-        val learningProcess_1 = new LearningProcess(Config.STEP_FACTOR, dataSet, neuralNet_1, 0)
-        val learningProcess_2 = new LearningProcess(Config.STEP_FACTOR, dataSet, neuralNet_2, 1)
-        startAutosave(learningProcess_1, NEURAL_NET_1)
-        startAutosave(learningProcess_2, NEURAL_NET_2)
+        val neuralNets = store.readNeuralNetFromFile(NEURAL_NET, INITIAL_NETWORK_FACTORIES)
+        val learningProcess = new LearningProcess(List(STEP_FACTOR, STEP_FACTOR), dataSet, neuralNets)
+        startAutosave(learningProcess, NEURAL_NET)
 
-        (learningProcess_1, learningProcess_2)
+        learningProcess
     }
 
-    private def startAutosave(learningProcess: LearningProcess,  file:String) = {
+    private def startAutosave(learningProcess: LearningProcess, file: String) = {
         Observable.interval(Duration(10, scala.concurrent.duration.SECONDS))
-                .observeOn(IOScheduler.apply())
-                .map(_ => store.writeToFile(learningProcess.neuralNetwork, file))
-                .subscribe()
+            .observeOn(IOScheduler.apply())
+            .map(_ => store.writeToFile(learningProcess.neuralNetworks, file))
+            .subscribe()
     }
 
-    def autosaveDataset(teachingSession: TeachingSession) :Unit = {
+    def autosaveDataset(teachingSession: TeachingSession): Unit = {
         teachingSession.observeScenarios()
-                .subscribe()
+            .subscribe()
     }
 }

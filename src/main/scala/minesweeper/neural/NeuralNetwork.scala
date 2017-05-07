@@ -13,16 +13,16 @@ class NeuralNetwork(weights: List[List[List[Double]]]) {
                 row.slice(0, row.size - 1).toArray[Double])
                     .toArray[Array[Double]]
             val fixed = neurons.map(_.last).toArray[Double]
-            new Layer(null, new DoubleMatrix(data), new DoubleMatrix(fixed), null)
+            new Layer(new DoubleMatrix(data), new DoubleMatrix(fixed))
         })
     }
 
-    def evaluate(input: List[Double]): List[Double] = {
+    def evaluate(input: List[Double]): Double = {
         val inputArray = input.toArray[Double]
         val inputVector = new DoubleMatrix(inputArray)
 
         val output = layers.foldLeft(inputVector)((I, layer) => layer.forward(I))
-        output.data.toList
+        output.data.head
     }
 
     def learn(stepFactor: Double, expectedValue: Double): Double = {
@@ -30,9 +30,14 @@ class NeuralNetwork(weights: List[List[List[Double]]]) {
         val output = outputLayer.lastOutput.data(0)
 
         val error = expectedValue - output
-        val step = error * stepFactor
-
-        layers.foldRight(new DoubleMatrix(Array(1d)))((layer, grad) => layer.learn(step, grad))
+        val step =
+            if(expectedValue == 1 && output < 0) stepFactor
+            else if (expectedValue == -1 && output > 0) -stepFactor
+            else 0
+        //val step = /*error * */stepFactor
+        if(step != 0) {
+            layers.foldRight(new DoubleMatrix(Array(1d)))((layer, grad) => layer.learn(step, grad))
+        }
         error
     }
 

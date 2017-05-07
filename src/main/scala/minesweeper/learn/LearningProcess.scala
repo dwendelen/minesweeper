@@ -8,15 +8,21 @@ class LearningProcess(stepFactors: List[Double], var dataSet: DataSet, val neura
             Thread.sleep(100)
             tick()
         } else {
-            val dataPoint = dataSet.random()
-            val out = dataPoint.output(index)
-
-            if (out == 0) {
-                tick()
-            } else {
-                neuralNetwork.evaluate(dataPoint.inputs)
-                neuralNetwork.learn(stepFactor, List(out))
-            }
+            tickWithData()
         }
+    }
+
+    private def tickWithData(): List[Double] = {
+        val dataPoint = dataSet.random()
+        (neuralNetworks, dataPoint.output, stepFactors)
+            .zipped
+            .map {
+                case (neuralNetwork, out, stepFactor) => tick(dataPoint.inputs, neuralNetwork, out, stepFactor)
+            }
+    }
+
+    private def tick(input: List[Double], neuralNetwork: NeuralNetwork, out: Double, stepFactor: Double): Double = {
+        neuralNetwork.evaluate(input)
+        neuralNetwork.learn(stepFactor, out)
     }
 }

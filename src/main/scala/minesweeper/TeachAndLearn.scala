@@ -41,8 +41,8 @@ object TeachAndLearn {
     }
 
     private def setUpLearingProcess(dataSet: DataSet) = {
-        val neuralNet = store.readNeuralNetFromFile(NEURAL_NET_1, INITIAL_NETWORK_FACTORY)
-        val learningProcess = new LearningProcess(STEP_FACTOR, dataSet, neuralNet, 0)
+        val neuralNet = store.readNeuralNetFromFile(NEURAL_NET, INITIAL_NETWORK_FACTORIES)
+        val learningProcess = new LearningProcess(List(STEP_FACTOR), dataSet, neuralNet)
         startAutosave(learningProcess)
 
         learningProcess
@@ -51,7 +51,7 @@ object TeachAndLearn {
     private def startAutosave(learningProcess: LearningProcess) = {
         Observable.interval(Duration(10, scala.concurrent.duration.SECONDS))
                 .observeOn(IOScheduler.apply())
-                .map(_ => store.writeToFile(learningProcess.neuralNetwork, NEURAL_NET_1))
+                .map(_ => store.writeToFile(learningProcess.neuralNetworks, NEURAL_NET))
                 .subscribe()
     }
 

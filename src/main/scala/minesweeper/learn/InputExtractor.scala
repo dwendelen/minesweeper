@@ -18,6 +18,19 @@ object InputExtractor {
 }
 
 class InputExtractor(minesweeper: Minesweeper) {
+    def extractExplorablesWithExposedNeighbours() : List[Coordinate] = {
+        extractExplorables()
+            .filter(hasExposedNeighbour)
+    }
+
+    def hasExposedNeighbour(coordinate: Coordinate): Boolean = {
+        val neighbours = Coordinate.tabulate(coordinate, 1)
+        neighbours
+            .flatten
+            .map(minesweeper.cellAt)
+            .filter(_ != null)
+            .exists(c => c.exposed)
+    }
     def extractExplorables(): List[Coordinate] = {
         List.tabulate(minesweeper.width, minesweeper.height)((x, y) => Coordinate(x, y))
                 .flatten
@@ -27,11 +40,12 @@ class InputExtractor(minesweeper: Minesweeper) {
                 })
     }
 
-    def extractArea(coordinate: Coordinate): List[List[Cell]] = {
-        Coordinate.tabulate(coordinate, 2)
+    def extractArea(coordinate: Coordinate): Grid[Cell] = {
+        val cells = Coordinate.tabulate(coordinate, 2)
                 .map(_.map(
                     minesweeper.cellAt
                 ))
+        Grid(cells)
     }
 
     def random() : Coordinate = {
